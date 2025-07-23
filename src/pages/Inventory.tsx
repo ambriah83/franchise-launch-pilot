@@ -10,62 +10,39 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
-  Minus
+  Minus,
+  Settings,
+  ArrowRightLeft,
+  ShoppingCart,
+  Plus
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
-
-const mockInventoryItems = [
-  {
-    id: 1,
-    sku: "CHAIR-001",
-    itemName: "Dining Chair - Standard",
-    category: "Furniture",
-    warehouse: "Atlanta Central",
-    quantityOnHand: 45,
-    quantityCommitted: 30,
-    reorderLevel: 20,
-    unitCost: 85
-  },
-  {
-    id: 2,
-    sku: "GRILL-PRO-500",
-    itemName: "Commercial Grill Pro 500",
-    category: "Kitchen Equipment", 
-    warehouse: "Chicago Main",
-    quantityOnHand: 8,
-    quantityCommitted: 12,
-    reorderLevel: 5,
-    unitCost: 4500
-  },
-  {
-    id: 3,
-    sku: "TABLE-ROUND-48",
-    itemName: "Round Table 48 inch",
-    category: "Furniture",
-    warehouse: "Dallas Hub",
-    quantityOnHand: 22,
-    quantityCommitted: 8,
-    reorderLevel: 15,
-    unitCost: 320
-  },
-  {
-    id: 4,
-    sku: "POS-TABLET-10",
-    itemName: "POS Tablet 10 inch",
-    category: "Technology",
-    warehouse: "Atlanta Central",
-    quantityOnHand: 3,
-    quantityCommitted: 6,
-    reorderLevel: 10,
-    unitCost: 450
-  }
-]
+import { useInventoryManagement } from "@/hooks/useInventoryManagement"
+import { StockAdjustmentDialog } from "@/components/inventory/StockAdjustmentDialog"
+import { TransferRequestDialog } from "@/components/inventory/TransferRequestDialog"
+import { ReorderSuggestionsDialog } from "@/components/inventory/ReorderSuggestionsDialog"
+import { useNavigate } from "react-router-dom"
 
 export default function Inventory() {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Enhanced inventory management
+  const {
+    inventoryItems,
+    adjustStock,
+    createTransferRequest,
+    getReorderSuggestions
+  } = useInventoryManagement()
+
+  // Dialog states
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false)
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false)
+  const [reorderDialogOpen, setReorderDialogOpen] = useState(false)
+  const [selectedItem, setSelectedItem] = useState(null)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -108,38 +85,50 @@ export default function Inventory() {
   }
 
   const handleAddItem = () => {
-    toast({
-      title: "Add Inventory Item",
-      description: "Item creation form would open here.",
-    })
+    navigate('/inventory-catalog')
   }
 
   const handleFilter = () => {
     toast({
       title: "Filter Options",
-      description: "Filter panel would open here.",
+      description: "Advanced filter panel will be available soon.",
     })
   }
 
-  const handleViewDetails = (itemId: number) => {
+  const handleViewDetails = (item) => {
     toast({
       title: "Item Details",
-      description: `Loading details for item ${itemId}...`,
+      description: `Viewing details for ${item.itemName}`,
     })
   }
 
-  const handleReorder = (itemId: number) => {
-    toast({
-      title: "Reorder Item",
-      description: `Creating reorder request for item ${itemId}...`,
-    })
+  const handleAdjustStock = (item) => {
+    setSelectedItem(item)
+    setAdjustmentDialogOpen(true)
   }
 
-  const filteredItems = mockInventoryItems.filter(item =>
+  const handleTransferRequest = (item) => {
+    setSelectedItem(item)
+    setTransferDialogOpen(true)
+  }
+
+  const handleViewReorderSuggestions = () => {
+    setReorderDialogOpen(true)
+  }
+
+  const handleCreatePurchaseOrder = (itemIds) => {
+    // Navigate to create PO with pre-selected items
+    const params = new URLSearchParams()
+    itemIds.forEach(id => params.append('item', id))
+    navigate(`/purchase-orders/create?${params.toString()}`)
+  }
+
+  const reorderSuggestions = getReorderSuggestions()
+
+  const filteredItems = inventoryItems.filter(item =>
     item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())
+    item.category.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -153,10 +142,20 @@ export default function Inventory() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Button variant="outline" onClick={handleViewReorderSuggestions}>
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Reorder Suggestions
+            {reorderSuggestions.length > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {reorderSuggestions.length}
+              </Badge>
+            )}
+          </Button>
           <Button variant="outline" onClick={handleExport} disabled={isLoading}>
             {isLoading ? "Exporting..." : "Export"}
           </Button>
           <Button onClick={handleAddItem}>
+            <Plus className="h-4 w-4 mr-2" />
             Add Item
           </Button>
         </div>
@@ -182,9 +181,8 @@ export default function Inventory() {
       {/* Inventory List */}
       <div className="space-y-4">
         {filteredItems.map((item) => {
-          const available = item.quantityOnHand - item.quantityCommitted
-          const stockInfo = getStockStatus(item.quantityOnHand, item.quantityCommitted, item.reorderLevel)
-          const progressValue = getStockProgress(item.quantityOnHand, item.quantityCommitted)
+          const stockInfo = getStockStatus(item.totalQuantity, item.totalQuantity - item.availableQuantity, item.reorderLevel)
+          const progressValue = item.totalQuantity > 0 ? (item.availableQuantity / item.totalQuantity) * 100 : 0
           const IconComponent = stockInfo.icon
           
           return (
@@ -196,25 +194,41 @@ export default function Inventory() {
                     <CardDescription className="flex items-center gap-4">
                       <span>SKU: {item.sku}</span>
                       <span>Category: {item.category}</span>
-                      <span>Warehouse: {item.warehouse}</span>
+                      <span>{item.stockLevels.length} warehouse(s)</span>
                     </CardDescription>
                   </div>
-                  <Badge className={stockInfo.color}>
-                    <IconComponent className="h-3 w-3 mr-1" />
-                    {stockInfo.status}
-                  </Badge>
+                  <div className="flex gap-2">
+                    {item.isOutOfStock && (
+                      <Badge className="bg-destructive">
+                        <Minus className="h-3 w-3 mr-1" />
+                        OUT OF STOCK
+                      </Badge>
+                    )}
+                    {item.isLowStock && !item.isOutOfStock && (
+                      <Badge className="bg-warning">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        LOW STOCK
+                      </Badge>
+                    )}
+                    {!item.isOutOfStock && !item.isLowStock && (
+                      <Badge className="bg-success">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        IN STOCK
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {/* Stock Levels */}
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Stock Levels</div>
                     <div className="space-y-1 text-sm">
-                      <div>On Hand: <span className="font-medium">{item.quantityOnHand}</span></div>
-                      <div>Committed: <span className="font-medium">{item.quantityCommitted}</span></div>
-                      <div>Available: <span className="font-medium">{available}</span></div>
+                      <div>Total: <span className="font-medium">{item.totalQuantity}</span></div>
+                      <div>Available: <span className="font-medium">{item.availableQuantity}</span></div>
+                      <div>Reorder Level: <span className="font-medium">{Math.round(item.reorderLevel)}</span></div>
                     </div>
                   </div>
                   
@@ -231,18 +245,42 @@ export default function Inventory() {
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Value</div>
                     <div className="space-y-1 text-sm">
-                      <div>Unit Cost: <span className="font-medium">{formatCurrency(item.unitCost)}</span></div>
-                      <div>Total Value: <span className="font-medium">{formatCurrency(item.quantityOnHand * item.unitCost)}</span></div>
+                      <div>Unit Cost: <span className="font-medium">{formatCurrency(item.defaultUnitPrice)}</span></div>
+                      <div>Total Value: <span className="font-medium">{formatCurrency(item.totalQuantity * item.defaultUnitPrice)}</span></div>
+                    </div>
+                  </div>
+                  
+                  {/* Warehouse Breakdown */}
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Warehouses</div>
+                    <div className="space-y-1 text-xs">
+                      {item.stockLevels.slice(0, 3).map((stock) => (
+                        <div key={stock.warehouseId} className="flex justify-between">
+                          <span>WH-{stock.warehouseId.slice(-4)}:</span>
+                          <span>{stock.quantityOnHand}</span>
+                        </div>
+                      ))}
+                      {item.stockLevels.length > 3 && (
+                        <div className="text-muted-foreground">
+                          +{item.stockLevels.length - 3} more
+                        </div>
+                      )}
                     </div>
                   </div>
                   
                   {/* Actions */}
                   <div className="flex flex-col gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(item.id)}>
-                      View Details
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(item)}>
+                      <Settings className="h-4 w-4 mr-1" />
+                      Details
                     </Button>
-                    <Button size="sm" onClick={() => handleReorder(item.id)}>
-                      Reorder
+                    <Button variant="outline" size="sm" onClick={() => handleAdjustStock(item)}>
+                      <Settings className="h-4 w-4 mr-1" />
+                      Adjust
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleTransferRequest(item)}>
+                      <ArrowRightLeft className="h-4 w-4 mr-1" />
+                      Transfer
                     </Button>
                   </div>
                 </div>
@@ -251,6 +289,32 @@ export default function Inventory() {
           )
         })}
       </div>
+
+      {/* Dialogs */}
+      <StockAdjustmentDialog
+        open={adjustmentDialogOpen}
+        onOpenChange={setAdjustmentDialogOpen}
+        item={selectedItem}
+        onAdjustment={async (itemId, warehouseId, quantityChange, reason, type) => {
+          await adjustStock(itemId, warehouseId, quantityChange, reason, type);
+        }}
+      />
+
+      <TransferRequestDialog
+        open={transferDialogOpen}
+        onOpenChange={setTransferDialogOpen}
+        item={selectedItem}
+        onTransferRequest={async (itemId, fromWarehouseId, toWarehouseId, quantity, notes) => {
+          await createTransferRequest(itemId, fromWarehouseId, toWarehouseId, quantity, notes);
+        }}
+      />
+
+      <ReorderSuggestionsDialog
+        open={reorderDialogOpen}
+        onOpenChange={setReorderDialogOpen}
+        suggestions={reorderSuggestions}
+        onCreatePurchaseOrder={handleCreatePurchaseOrder}
+      />
     </div>
   )
 }
