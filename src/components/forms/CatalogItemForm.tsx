@@ -28,7 +28,7 @@ interface CatalogItemFormProps {
   onSuccess: () => void;
 }
 
-export default function CatalogItemForm({ open, onOpenChange, item, onSuccess }: CatalogItemFormProps) {
+function CatalogItemForm({ open, onOpenChange, item, onSuccess }: CatalogItemFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -257,3 +257,7 @@ export default function CatalogItemForm({ open, onOpenChange, item, onSuccess }:
     </Dialog>
   );
 }
+
+// Named and default exports for compatibility
+export { CatalogItemForm };
+export default CatalogItemForm;
