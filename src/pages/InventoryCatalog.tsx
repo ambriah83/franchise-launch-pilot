@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,55 +10,36 @@ import {
   Edit,
   Package
 } from "lucide-react"
-
-const mockCatalogItems = [
-  {
-    id: 1,
-    sku: "CHAIR-001",
-    itemName: "Dining Chair - Standard",
-    description: "Comfortable dining chair with back support, commercial grade",
-    category: "Furniture",
-    supplier: "Commercial Furniture Co.",
-    defaultPrice: 85,
-    status: "Active",
-    image: null
-  },
-  {
-    id: 2,
-    sku: "GRILL-PRO-500",
-    itemName: "Commercial Grill Pro 500",
-    description: "Heavy-duty commercial grill, stainless steel, 500°F max",
-    category: "Kitchen Equipment",
-    supplier: "Kitchen Solutions LLC",
-    defaultPrice: 4500,
-    status: "Active",
-    image: null
-  },
-  {
-    id: 3,
-    sku: "TABLE-ROUND-48",
-    itemName: "Round Table 48 inch",
-    description: "Round dining table, 48 inch diameter, seats 4 people",
-    category: "Furniture",
-    supplier: "Commercial Furniture Co.",
-    defaultPrice: 320,
-    status: "Active",
-    image: null
-  },
-  {
-    id: 4,
-    sku: "MIXER-STAND-20QT",
-    itemName: "Stand Mixer 20 Quart",
-    description: "Commercial stand mixer, 20 quart capacity, variable speed",
-    category: "Kitchen Equipment",
-    supplier: "Kitchen Solutions LLC",
-    defaultPrice: 2800,
-    status: "Discontinued",
-    image: null
-  }
-]
+import { useLocalStorageData } from "@/hooks/useLocalStorage"
+import { localStorageService } from "@/services/localStorageService"
+import { useToast } from "@/hooks/use-toast"
+import { CatalogItemForm } from "@/components/forms/CatalogItemForm"
+import { CatalogItem } from "@/types"
 
 export default function InventoryCatalog() {
+  const { toast } = useToast()
+  const { data: catalogItems, refreshData } = useLocalStorageData<CatalogItem>(
+    'catalogItems',
+    () => localStorageService.getCatalogItems(),
+    []
+  )
+
+  const [searchTerm, setSearchTerm] = useState("")
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<CatalogItem | undefined>()
+
+  const filteredItems = useMemo(() => {
+    if (!searchTerm) return catalogItems
+    
+    return catalogItems.filter(item =>
+      item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      localStorageService.getSuppliers().find(s => s.id === item.supplierId)?.supplierName?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [catalogItems, searchTerm])
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -84,6 +66,20 @@ export default function InventoryCatalog() {
     }
   }
 
+  const handleCreateItem = () => {
+    setEditingItem(undefined)
+    setFormOpen(true)
+  }
+
+  const handleEditItem = (item: CatalogItem) => {
+    setEditingItem(item)
+    setFormOpen(true)
+  }
+
+  const handleFormSuccess = () => {
+    refreshData()
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -94,7 +90,7 @@ export default function InventoryCatalog() {
             Master catalog of all available franchise items
           </p>
         </div>
-        <Button>
+        <Button onClick={handleCreateItem}>
           <Plus className="h-4 w-4 mr-2" />
           Add Item
         </Button>
@@ -107,6 +103,8 @@ export default function InventoryCatalog() {
           <Input
             placeholder="Search catalog..."
             className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <Button variant="outline">
@@ -117,7 +115,7 @@ export default function InventoryCatalog() {
 
       {/* Catalog Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {mockCatalogItems.map((item) => (
+        {filteredItems.map((item) => (
           <Card key={item.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -146,20 +144,20 @@ export default function InventoryCatalog() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Supplier:</span>
-                  <span className="ml-2">{item.supplier}</span>
+                  <span className="ml-2">{localStorageService.getSuppliers().find(s => s.id === item.supplierId)?.supplierName || "N/A"}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Default Price:</span>
-                  <span className="ml-2 font-medium">{formatCurrency(item.defaultPrice)}</span>
+                  <span className="ml-2 font-medium">{formatCurrency(item.defaultUnitPrice)}</span>
                 </div>
               </div>
               
               {/* Actions */}
               <div className="flex gap-2">
-                <Button size="sm" className="flex-1">
+                <Button size="sm" className="flex-1" onClick={() => handleEditItem(item)}>
                   View Details
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => handleEditItem(item)}>
                   <Edit className="h-3 w-3" />
                 </Button>
               </div>
@@ -167,6 +165,13 @@ export default function InventoryCatalog() {
           </Card>
         ))}
       </div>
+
+      <CatalogItemForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        item={editingItem}
+        onSuccess={handleFormSuccess}
+      />
     </div>
   )
 }

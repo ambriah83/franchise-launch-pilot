@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,51 +11,32 @@ import {
   DollarSign,
   Download
 } from "lucide-react"
-
-const mockInvoices = [
-  {
-    id: 1,
-    invoiceNumber: "INV-2024-001",
-    supplier: "Restaurant Depot Inc.",
-    dateIssued: new Date("2024-01-10"),
-    dueDate: new Date("2024-02-10"),
-    amount: 12500,
-    status: "Paid",
-    poNumbers: ["PO-1001-v1", "PO-1002-v1"]
-  },
-  {
-    id: 2,
-    invoiceNumber: "INV-2024-002",
-    supplier: "Kitchen Solutions LLC",
-    dateIssued: new Date("2024-01-12"),
-    dueDate: new Date("2024-02-12"),
-    amount: 8750,
-    status: "Awaiting Payment",
-    poNumbers: ["PO-1003-v1"]
-  },
-  {
-    id: 3,
-    invoiceNumber: "INV-2024-003",
-    supplier: "Commercial Furniture Co.",
-    dateIssued: new Date("2024-01-15"),
-    dueDate: new Date("2024-02-15"),
-    amount: 15200,
-    status: "Disputed",
-    poNumbers: ["PO-1004-v1", "PO-1005-v1"]
-  },
-  {
-    id: 4,
-    invoiceNumber: "INV-2024-004",
-    supplier: "Tech Solutions Inc.",
-    dateIssued: new Date("2024-01-18"),
-    dueDate: new Date("2024-02-18"),
-    amount: 4500,
-    status: "Awaiting Payment",
-    poNumbers: ["PO-1006-v1"]
-  }
-]
+import { useLocalStorageData } from "@/hooks/useLocalStorage"
+import { localStorageService } from "@/services/localStorageService"
+import { useToast } from "@/hooks/use-toast"
+import InvoiceForm from "@/components/forms/InvoiceForm"
+import { Invoice } from "@/types"
 
 export default function Invoices() {
+  const { toast } = useToast()
+  const { data: invoices, refreshData } = useLocalStorageData<Invoice>(
+    'invoices',
+    () => [], // TODO: Implement invoices in localStorage service
+    []
+  )
+
+  const [searchTerm, setSearchTerm] = useState("")
+  const [formOpen, setFormOpen] = useState(false)
+
+  const filteredInvoices = useMemo(() => {
+    if (!searchTerm) return invoices
+    
+    return invoices.filter(invoice =>
+      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.poNumbers.some(po => po.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+  }, [invoices, searchTerm])
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -81,17 +63,57 @@ export default function Invoices() {
     return diffDays
   }
 
-  const totalPending = mockInvoices
+  const totalPending = invoices
     .filter(inv => inv.status === 'Awaiting Payment')
     .reduce((sum, inv) => sum + inv.amount, 0)
 
-  const totalPaid = mockInvoices
+  const totalPaid = invoices
     .filter(inv => inv.status === 'Paid')
     .reduce((sum, inv) => sum + inv.amount, 0)
 
-  const totalDisputed = mockInvoices
+  const totalDisputed = invoices
     .filter(inv => inv.status === 'Disputed')
     .reduce((sum, inv) => sum + inv.amount, 0)
+
+  const handleUploadInvoice = () => {
+    setFormOpen(true)
+  }
+
+  const handleExport = () => {
+    toast({
+      title: "Exporting Data",
+      description: "Invoice data is being prepared for download"
+    })
+  }
+
+  const handleViewPDF = (invoice: Invoice) => {
+    toast({
+      title: "Opening PDF",
+      description: `Opening PDF for ${invoice.invoiceNumber}`
+    })
+  }
+
+  const handleProcessPayment = (invoice: Invoice) => {
+    localStorageService.updateInvoice(invoice.id, { status: 'Paid' })
+    toast({
+      title: "Payment Processed",
+      description: `Payment completed for ${invoice.invoiceNumber}`
+    })
+    refreshData()
+  }
+
+  const handleResolveDispute = (invoice: Invoice) => {
+    localStorageService.updateInvoice(invoice.id, { status: 'Awaiting Payment' })
+    toast({
+      title: "Dispute Resolved",
+      description: `Dispute resolved for ${invoice.invoiceNumber}`
+    })
+    refreshData()
+  }
+
+  const handleFormSuccess = () => {
+    refreshData()
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -104,11 +126,11 @@ export default function Invoices() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button>
+          <Button onClick={handleUploadInvoice}>
             Upload Invoice
           </Button>
         </div>
@@ -123,7 +145,7 @@ export default function Invoices() {
                 <FileText className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{mockInvoices.length}</div>
+                <div className="text-2xl font-bold">{invoices.length}</div>
                 <div className="text-sm text-muted-foreground">Total Invoices</div>
               </div>
             </div>
@@ -180,6 +202,8 @@ export default function Invoices() {
           <Input
             placeholder="Search invoices..."
             className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <Button variant="outline">
@@ -190,7 +214,7 @@ export default function Invoices() {
 
       {/* Invoices List */}
       <div className="space-y-4">
-        {mockInvoices.map((invoice) => {
+        {filteredInvoices.map((invoice) => {
           const daysUntilDue = getDaysUntilDue(invoice.dueDate)
           
           return (
@@ -200,7 +224,7 @@ export default function Invoices() {
                   <div className="space-y-1">
                     <CardTitle className="text-lg">{invoice.invoiceNumber}</CardTitle>
                     <CardDescription className="flex items-center gap-4">
-                      <span>Supplier: {invoice.supplier}</span>
+                      <span>Supplier: {localStorageService.getSuppliers().find(s => s.id === invoice.supplierId)?.supplierName || "Unknown"}</span>
                       <span>PO(s): {invoice.poNumbers.join(", ")}</span>
                     </CardDescription>
                   </div>
@@ -255,16 +279,16 @@ export default function Invoices() {
                   
                   {/* Actions */}
                   <div className="flex flex-col gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleViewPDF(invoice)}>
                       View PDF
                     </Button>
                     {invoice.status === 'Awaiting Payment' && (
-                      <Button size="sm">
+                      <Button size="sm" onClick={() => handleProcessPayment(invoice)}>
                         Process Payment
                       </Button>
                     )}
                     {invoice.status === 'Disputed' && (
-                      <Button size="sm" variant="destructive">
+                      <Button size="sm" variant="destructive" onClick={() => handleResolveDispute(invoice)}>
                         Resolve Dispute
                       </Button>
                     )}

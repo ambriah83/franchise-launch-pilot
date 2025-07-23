@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,50 +12,34 @@ import {
   CheckCircle,
   AlertTriangle
 } from "lucide-react"
-
-const mockShipments = [
-  {
-    id: 1,
-    shipmentId: "SHP-2024-001",
-    poNumber: "PO-1001-v1",
-    carrier: "FedEx Freight",
-    trackingNumber: "8901234567890",
-    dateReceived: new Date("2024-01-15"),
-    receivedBy: "John Smith",
-    status: "Completed",
-    totalItems: 12,
-    itemsReceived: 12,
-    itemsDamaged: 0
-  },
-  {
-    id: 2,
-    shipmentId: "SHP-2024-002",
-    poNumber: "PO-1002-v1",
-    carrier: "UPS Freight",
-    trackingNumber: "1Z9999999999999999",
-    dateReceived: new Date("2024-01-14"),
-    receivedBy: "Sarah Johnson",
-    status: "Partial",
-    totalItems: 8,
-    itemsReceived: 6,
-    itemsDamaged: 1
-  },
-  {
-    id: 3,
-    shipmentId: "SHP-2024-003",
-    poNumber: "PO-1003-v1",
-    carrier: "DHL Supply Chain",
-    trackingNumber: "JD014600006796814059",
-    dateReceived: new Date("2024-01-13"),
-    receivedBy: "Mike Chen",
-    status: "Issues",
-    totalItems: 15,
-    itemsReceived: 13,
-    itemsDamaged: 3
-  }
-]
+import { useLocalStorageData } from "@/hooks/useLocalStorage"
+import { localStorageService } from "@/services/localStorageService"
+import { useToast } from "@/hooks/use-toast"
+import ShipmentForm from "@/components/forms/ShipmentForm"
+import { ShipmentLog } from "@/types"
 
 export default function Receiving() {
+  const { toast } = useToast()
+  const { data: shipments, refreshData } = useLocalStorageData<ShipmentLog>(
+    'shipmentLogs',
+    () => [], // TODO: Implement shipment logs in localStorage service
+    []
+  )
+
+  const [searchTerm, setSearchTerm] = useState("")
+  const [formOpen, setFormOpen] = useState(false)
+
+  const filteredShipments = useMemo(() => {
+    if (!searchTerm) return shipments
+    
+    return shipments.filter(shipment =>
+      shipment.shipmentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shipment.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shipment.carrier.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shipment.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [shipments, searchTerm])
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed': return 'bg-success'
@@ -73,6 +58,33 @@ export default function Receiving() {
     }
   }
 
+  const handleLogShipment = () => {
+    setFormOpen(true)
+  }
+
+  const handleViewDetails = (shipment: ShipmentLog) => {
+    toast({
+      title: "Shipment Details",
+      description: `Viewing details for ${shipment.shipmentId}`
+    })
+  }
+
+  const handleProcessItems = (shipment: ShipmentLog) => {
+    toast({
+      title: "Processing Items",
+      description: `Processing items for ${shipment.shipmentId}`
+    })
+  }
+
+  const handleFormSuccess = () => {
+    refreshData()
+  }
+
+  const totalShipments = shipments.length
+  const completedShipments = shipments.filter(s => s.status === 'Completed').length
+  const partialShipments = shipments.filter(s => s.status === 'Partial').length
+  const issueShipments = shipments.filter(s => s.status === 'Issues').length
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -83,7 +95,7 @@ export default function Receiving() {
             Track and manage incoming shipments and deliveries
           </p>
         </div>
-        <Button>
+        <Button onClick={handleLogShipment}>
           <Plus className="h-4 w-4 mr-2" />
           Log Shipment
         </Button>
@@ -95,6 +107,8 @@ export default function Receiving() {
         <Input
           placeholder="Search shipments..."
           className="pl-10"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
@@ -105,7 +119,7 @@ export default function Receiving() {
             <div className="flex items-center gap-3">
               <Truck className="h-5 w-5 text-primary" />
               <div>
-                <div className="text-2xl font-bold">25</div>
+                <div className="text-2xl font-bold">{totalShipments}</div>
                 <div className="text-sm text-muted-foreground">Total Shipments</div>
               </div>
             </div>
@@ -117,7 +131,7 @@ export default function Receiving() {
             <div className="flex items-center gap-3">
               <CheckCircle className="h-5 w-5 text-success" />
               <div>
-                <div className="text-2xl font-bold">18</div>
+                <div className="text-2xl font-bold">{completedShipments}</div>
                 <div className="text-sm text-muted-foreground">Completed</div>
               </div>
             </div>
@@ -129,7 +143,7 @@ export default function Receiving() {
             <div className="flex items-center gap-3">
               <Package className="h-5 w-5 text-warning" />
               <div>
-                <div className="text-2xl font-bold">5</div>
+                <div className="text-2xl font-bold">{partialShipments}</div>
                 <div className="text-sm text-muted-foreground">Partial</div>
               </div>
             </div>
@@ -141,7 +155,7 @@ export default function Receiving() {
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-5 w-5 text-destructive" />
               <div>
-                <div className="text-2xl font-bold">2</div>
+                <div className="text-2xl font-bold">{issueShipments}</div>
                 <div className="text-sm text-muted-foreground">Issues</div>
               </div>
             </div>
@@ -151,7 +165,7 @@ export default function Receiving() {
 
       {/* Shipments List */}
       <div className="space-y-4">
-        {mockShipments.map((shipment) => {
+        {filteredShipments.map((shipment) => {
           const StatusIcon = getStatusIcon(shipment.status)
           
           return (
@@ -191,9 +205,9 @@ export default function Receiving() {
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Items</div>
                     <div className="space-y-1 text-sm">
-                      <div>Total: {shipment.totalItems}</div>
-                      <div>Received: {shipment.itemsReceived}</div>
-                      <div>Damaged: {shipment.itemsDamaged}</div>
+                      <div>Total: {shipment.lineItems?.length || 0}</div>
+                      <div>Received: {shipment.lineItems?.length || 0}</div>
+                      <div>Damaged: 0</div>
                     </div>
                   </div>
                   
@@ -201,16 +215,16 @@ export default function Receiving() {
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Completion</div>
                     <div className="text-2xl font-bold">
-                      {Math.round((shipment.itemsReceived / shipment.totalItems) * 100)}%
+                      {shipment.lineItems?.length ? 100 : 0}%
                     </div>
                   </div>
                   
                   {/* Actions */}
                   <div className="flex flex-col gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(shipment)}>
                       View Details
                     </Button>
-                    <Button size="sm">
+                    <Button size="sm" onClick={() => handleProcessItems(shipment)}>
                       Process Items
                     </Button>
                   </div>
