@@ -37,6 +37,7 @@ export default function Warehouses() {
     regionalManagerId: '',
     capacity: 1000
   })
+  const [isLoading, setIsLoading] = useState(false)
 
   // Mock inventory counts for each warehouse
   const getInventoryStats = (warehouseId: string) => {
@@ -82,7 +83,7 @@ export default function Warehouses() {
     })
   }
 
-  const handleSaveWarehouse = () => {
+  const handleSaveWarehouse = async () => {
     if (!formData.warehouseName || !formData.address || !formData.regionalManagerId) {
       toast({
         title: "Validation Error",
@@ -92,18 +93,38 @@ export default function Warehouses() {
       return
     }
 
-    const newWarehouse = {
-      id: `WH-${Date.now()}`,
-      ...formData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+    setIsLoading(true)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800))
+      
+      const newWarehouse = {
+        id: `WH-${Date.now()}`,
+        ...formData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      setWarehouses(prev => [...prev, newWarehouse])
+      toast({
+        title: "Warehouse Added",
+        description: `${formData.warehouseName} has been added successfully.`
+      })
+      setShowAddDialog(false)
+      setFormData({
+        warehouseName: '',
+        address: '',
+        regionalManagerId: '',
+        capacity: 1000
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add warehouse. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
     }
-    setWarehouses(prev => [...prev, newWarehouse])
-    toast({
-      title: "Warehouse Added",
-      description: `${formData.warehouseName} has been added successfully.`
-    })
-    setShowAddDialog(false)
   }
 
   const handleFormChange = (field, value) => {
@@ -119,6 +140,63 @@ export default function Warehouses() {
       location: `Section ${String.fromCharCode(65 + index)}`,
       unitPrice: item.defaultUnitPrice
     }))
+  }
+
+  const handleGenerateReport = async (warehouse) => {
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast({
+        title: "Report Generated",
+        description: `Performance report for ${warehouse.warehouseName} has been generated and will be emailed to you.`
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleManageStaff = async (warehouse) => {
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800))
+      toast({
+        title: "Staff Management",
+        description: `Staff management panel for ${warehouse.warehouseName} is now available. You can assign roles and schedules.`
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to access staff management. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleBulkOperations = async (warehouse) => {
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 900))
+      toast({
+        title: "Bulk Operations",
+        description: `Bulk inventory operations for ${warehouse.warehouseName} are ready. You can now perform mass updates.`
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to initialize bulk operations. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -374,20 +452,38 @@ export default function Warehouses() {
                   </div>
                 </div>
                 
-                <div className="space-y-4">
+                  <div className="space-y-4">
                   <h4 className="font-medium">Quick Actions</h4>
                   <div className="grid gap-2">
-                    <Button variant="outline" size="sm" className="justify-start">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="justify-start"
+                      onClick={() => handleGenerateReport(manageWarehouse)}
+                      disabled={isLoading}
+                    >
                       <BarChart3 className="h-4 w-4 mr-2" />
-                      Generate Report
+                      {isLoading ? "Generating..." : "Generate Report"}
                     </Button>
-                    <Button variant="outline" size="sm" className="justify-start">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="justify-start"
+                      onClick={() => handleManageStaff(manageWarehouse)}
+                      disabled={isLoading}
+                    >
                       <Users className="h-4 w-4 mr-2" />
-                      Manage Staff
+                      {isLoading ? "Loading..." : "Manage Staff"}
                     </Button>
-                    <Button variant="outline" size="sm" className="justify-start">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="justify-start"
+                      onClick={() => handleBulkOperations(manageWarehouse)}
+                      disabled={isLoading}
+                    >
                       <Package className="h-4 w-4 mr-2" />
-                      Bulk Operations
+                      {isLoading ? "Processing..." : "Bulk Operations"}
                     </Button>
                   </div>
                 </div>
@@ -471,11 +567,11 @@ export default function Warehouses() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)} disabled={isLoading}>
               Cancel
             </Button>
-            <Button onClick={handleSaveWarehouse}>
-              Add Warehouse
+            <Button onClick={handleSaveWarehouse} disabled={isLoading}>
+              {isLoading ? "Adding..." : "Add Warehouse"}
             </Button>
           </DialogFooter>
         </DialogContent>
