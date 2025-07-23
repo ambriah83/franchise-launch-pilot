@@ -158,7 +158,7 @@ export const mockCatalogItems: CatalogItem[] = [
 export const mockProjects: Project[] = [
   {
     id: '1',
-    locationName: 'Downtown Seattle',
+    locationName: 'Queen Creek',
     projectManagerId: '1',
     status: 'In Progress',
     targetOpeningDate: new Date('2024-08-15'),
@@ -171,7 +171,7 @@ export const mockProjects: Project[] = [
   },
   {
     id: '2',
-    locationName: 'Austin Tech District',
+    locationName: 'San Tan Valley',
     projectManagerId: '1',
     status: 'Planning',
     targetOpeningDate: new Date('2024-10-01'),
@@ -184,7 +184,7 @@ export const mockProjects: Project[] = [
   },
   {
     id: '3',
-    locationName: 'Miami Beach',
+    locationName: 'Scottsdale',
     projectManagerId: '1',
     status: 'Completed',
     targetOpeningDate: new Date('2024-06-01'),
@@ -194,6 +194,32 @@ export const mockProjects: Project[] = [
     budgetVariance: 8000.00,
     createdAt: new Date('2024-01-10'),
     updatedAt: new Date('2024-06-01')
+  },
+  {
+    id: '4',
+    locationName: 'South Gilbert',
+    projectManagerId: '1',
+    status: 'On Hold',
+    targetOpeningDate: new Date('2024-12-15'),
+    totalBudget: 280000.00,
+    totalCommitted: 25000.00,
+    totalSpent: 8000.00,
+    budgetVariance: 255000.00,
+    createdAt: new Date('2024-04-01'),
+    updatedAt: new Date('2024-07-15')
+  },
+  {
+    id: '5',
+    locationName: 'Tempe',
+    projectManagerId: '1',
+    status: 'Planning',
+    targetOpeningDate: new Date('2024-11-01'),
+    totalBudget: 295000.00,
+    totalCommitted: 35000.00,
+    totalSpent: 12000.00,
+    budgetVariance: 260000.00,
+    createdAt: new Date('2024-05-15'),
+    updatedAt: new Date('2024-07-15')
   }
 ];
 
@@ -386,7 +412,7 @@ export const mockDashboardStats: DashboardStats = {
 export const mockBudgetAnalysis: BudgetAnalysis[] = [
   {
     projectId: '1',
-    projectName: 'Downtown Seattle',
+    projectName: 'Queen Creek',
     budget: 250000,
     committed: 185000,
     spent: 125000,
@@ -395,7 +421,7 @@ export const mockBudgetAnalysis: BudgetAnalysis[] = [
   },
   {
     projectId: '2',
-    projectName: 'Austin Tech District',
+    projectName: 'San Tan Valley',
     budget: 275000,
     committed: 45000,
     spent: 15000,
@@ -404,12 +430,30 @@ export const mockBudgetAnalysis: BudgetAnalysis[] = [
   },
   {
     projectId: '3',
-    projectName: 'Miami Beach',
+    projectName: 'Scottsdale',
     budget: 300000,
     committed: 295000,
     spent: 292000,
     variance: 8000,
     variancePercentage: 3
+  },
+  {
+    projectId: '4',
+    projectName: 'South Gilbert',
+    budget: 280000,
+    committed: 25000,
+    spent: 8000,
+    variance: 255000,
+    variancePercentage: 91
+  },
+  {
+    projectId: '5',
+    projectName: 'Tempe',
+    budget: 295000,
+    committed: 35000,
+    spent: 12000,
+    variance: 260000,
+    variancePercentage: 88
   }
 ];
 
