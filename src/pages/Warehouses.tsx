@@ -26,6 +26,8 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function Warehouses() {
   const { toast } = useToast()
+  const [warehouses, setWarehouses] = useState(mockWarehouses)
+  const [searchTerm, setSearchTerm] = useState('')
   const [viewInventory, setViewInventory] = useState(null)
   const [manageWarehouse, setManageWarehouse] = useState(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -90,6 +92,13 @@ export default function Warehouses() {
       return
     }
 
+    const newWarehouse = {
+      id: `WH-${Date.now()}`,
+      ...formData,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    setWarehouses(prev => [...prev, newWarehouse])
     toast({
       title: "Warehouse Added",
       description: `${formData.warehouseName} has been added successfully.`
@@ -134,6 +143,8 @@ export default function Warehouses() {
         <Input
           placeholder="Search warehouses..."
           className="pl-10"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
@@ -144,7 +155,7 @@ export default function Warehouses() {
             <div className="flex items-center gap-3">
               <Warehouse className="h-5 w-5 text-primary" />
               <div>
-                <div className="text-2xl font-bold">{mockWarehouses.length}</div>
+                <div className="text-2xl font-bold">{warehouses.length}</div>
                 <div className="text-sm text-muted-foreground">Total Locations</div>
               </div>
             </div>
@@ -190,7 +201,13 @@ export default function Warehouses() {
 
       {/* Warehouses Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {mockWarehouses.map((warehouse) => {
+        {warehouses
+          .filter(warehouse => 
+            warehouse.warehouseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            warehouse.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            warehouse.regionalManagerId.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+          .map((warehouse) => {
           const stats = getInventoryStats(warehouse.id)
           
           return (

@@ -25,6 +25,8 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function Suppliers() {
   const { toast } = useToast()
+  const [suppliers, setSuppliers] = useState(mockSuppliers)
+  const [searchTerm, setSearchTerm] = useState('')
   const [viewSupplier, setViewSupplier] = useState(null)
   const [editSupplier, setEditSupplier] = useState(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -82,12 +84,24 @@ export default function Suppliers() {
     }
 
     if (editSupplier) {
+      setSuppliers(prev => prev.map(supplier => 
+        supplier.id === editSupplier.id 
+          ? { ...supplier, ...formData }
+          : supplier
+      ))
       toast({
         title: "Supplier Updated",
         description: `${formData.supplierName} has been updated successfully.`
       })
       setEditSupplier(null)
     } else {
+      const newSupplier = {
+        id: `SUP-${Date.now()}`,
+        ...formData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+      setSuppliers(prev => [...prev, newSupplier])
       toast({
         title: "Supplier Added",
         description: `${formData.supplierName} has been added successfully.`
@@ -122,12 +136,21 @@ export default function Suppliers() {
         <Input
           placeholder="Search suppliers..."
           className="pl-10"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
       {/* Suppliers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {mockSuppliers.map((supplier) => (
+        {suppliers
+          .filter(supplier => 
+            supplier.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            supplier.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            supplier.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            supplier.address.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+          .map((supplier) => (
           <Card key={supplier.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
