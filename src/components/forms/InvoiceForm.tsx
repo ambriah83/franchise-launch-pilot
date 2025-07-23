@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { localStorageService } from "@/services/localStorageService"
-import { Invoice } from "@/types"
+import { Invoice, InvoiceStatus } from "@/types"
 
 interface InvoiceFormProps {
   open: boolean
@@ -183,7 +183,7 @@ export default function InvoiceForm({ open, onOpenChange, invoice, onSuccess }: 
 
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+            <Select value={formData.status} onValueChange={(value: InvoiceStatus) => setFormData(prev => ({ ...prev, status: value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Select status..." />
               </SelectTrigger>

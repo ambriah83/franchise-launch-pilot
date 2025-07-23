@@ -77,6 +77,8 @@ export default function ShipmentForm({ open, onOpenChange, shipment, onSuccess }
       } else {
         localStorageService.createShipmentLog({
           ...formData,
+          poId: formData.poNumber, // Use poNumber as poId for now
+          receivedById: formData.receivedBy, // Map receivedBy to receivedById
           dateReceived: new Date(),
           lineItems: []
         })
@@ -178,7 +180,7 @@ export default function ShipmentForm({ open, onOpenChange, shipment, onSuccess }
 
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+            <Select value={formData.status} onValueChange={(value: 'Pending' | 'In Transit' | 'Delivered' | 'Delayed' | 'Completed' | 'Partial' | 'Issues') => setFormData(prev => ({ ...prev, status: value }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Select status..." />
               </SelectTrigger>

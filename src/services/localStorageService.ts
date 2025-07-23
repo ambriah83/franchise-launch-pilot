@@ -9,7 +9,9 @@ import {
   OrderKit,
   LineItem,
   User,
-  InventoryAlert
+  InventoryAlert,
+  Invoice,
+  ShipmentLog
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -23,6 +25,8 @@ const STORAGE_KEYS = {
   LINE_ITEMS: 'franchise_line_items',
   USERS: 'franchise_users',
   INVENTORY_ALERTS: 'franchise_inventory_alerts',
+  INVOICES: 'franchise_invoices',
+  SHIPMENT_LOGS: 'franchise_shipment_logs',
   SETTINGS: 'franchise_settings'
 } as const;
 
@@ -202,6 +206,40 @@ class LocalStorageService {
 
   deleteOrderKit(id: string): boolean {
     return this.delete(STORAGE_KEYS.ORDER_KITS, id);
+  }
+
+  // Invoices
+  getInvoices(): Invoice[] {
+    return this.get<Invoice>(STORAGE_KEYS.INVOICES);
+  }
+
+  createInvoice(invoiceData: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>): Invoice {
+    return this.create<Invoice>(STORAGE_KEYS.INVOICES, invoiceData);
+  }
+
+  updateInvoice(id: string, updates: Partial<Invoice>): Invoice | null {
+    return this.update<Invoice>(STORAGE_KEYS.INVOICES, id, updates);
+  }
+
+  deleteInvoice(id: string): boolean {
+    return this.delete(STORAGE_KEYS.INVOICES, id);
+  }
+
+  // Shipment Logs
+  getShipmentLogs(): ShipmentLog[] {
+    return this.get<ShipmentLog>(STORAGE_KEYS.SHIPMENT_LOGS);
+  }
+
+  createShipmentLog(shipmentData: Omit<ShipmentLog, 'id' | 'createdAt' | 'updatedAt'>): ShipmentLog {
+    return this.create<ShipmentLog>(STORAGE_KEYS.SHIPMENT_LOGS, shipmentData);
+  }
+
+  updateShipmentLog(id: string, updates: Partial<ShipmentLog>): ShipmentLog | null {
+    return this.update<ShipmentLog>(STORAGE_KEYS.SHIPMENT_LOGS, id, updates);
+  }
+
+  deleteShipmentLog(id: string): boolean {
+    return this.delete(STORAGE_KEYS.SHIPMENT_LOGS, id);
   }
 
   // Settings

@@ -13,7 +13,7 @@ import {
 import { useLocalStorageData } from "@/hooks/useLocalStorage"
 import { localStorageService } from "@/services/localStorageService"
 import { useToast } from "@/hooks/use-toast"
-import { CatalogItemForm } from "@/components/forms/CatalogItemForm"
+import CatalogItemForm from "@/components/forms/CatalogItemForm"
 import { CatalogItem } from "@/types"
 
 export default function InventoryCatalog() {

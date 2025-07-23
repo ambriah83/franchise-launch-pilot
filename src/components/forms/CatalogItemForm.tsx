@@ -28,7 +28,7 @@ interface CatalogItemFormProps {
   onSuccess: () => void;
 }
 
-export function CatalogItemForm({ open, onOpenChange, item, onSuccess }: CatalogItemFormProps) {
+export default function CatalogItemForm({ open, onOpenChange, item, onSuccess }: CatalogItemFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({

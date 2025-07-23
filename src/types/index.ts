@@ -6,7 +6,7 @@ export type POStatus = 'Draft' | 'Pending' | 'Approved' | 'Ordered' | 'Partially
 
 export type LineItemStatus = 'Pending' | 'Ordered' | 'Shipped' | 'Backordered' | 'Received' | 'Cancelled';
 
-export type InvoiceStatus = 'Awaiting Payment' | 'Paid' | 'Disputed';
+export type InvoiceStatus = 'Awaiting Payment' | 'Paid' | 'Disputed' | 'Overdue';
 
 export type ProjectStatus = 'Planning' | 'In Progress' | 'On Hold' | 'Completed' | 'Cancelled';
 
@@ -113,6 +113,9 @@ export interface OrderKit {
   id: string;
   kitName: string;
   description?: string;
+  category?: string;
+  estimatedCost?: number;
+  lineItems?: KitLineItem[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -130,11 +133,16 @@ export interface KitLineItem {
 // RECEIVING Shipment Logs
 export interface ShipmentLog {
   id: string;
+  shipmentId?: string;
   poId: string;
+  poNumber?: string;
   dateReceived: Date;
   carrier: string;
   trackingNumber: string;
   receivedById: string;
+  receivedBy?: string;
+  status?: 'Pending' | 'In Transit' | 'Delivered' | 'Delayed' | 'Completed' | 'Partial' | 'Issues';
+  lineItems?: ShipmentLineItem[];
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -160,6 +168,7 @@ export interface Invoice {
   dueDate: Date;
   amount: number;
   status: InvoiceStatus;
+  poNumbers?: string[];
   invoicePdf?: string;
   createdAt: Date;
   updatedAt: Date;
