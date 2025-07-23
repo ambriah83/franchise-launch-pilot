@@ -12,8 +12,16 @@ import {
   DollarSign
 } from "lucide-react"
 import { mockPurchaseOrders, getProjectById, getSupplierById } from "@/data/mockData"
+import { useToast } from "@/hooks/use-toast"
+import { useNavigate } from "react-router-dom"
+import { useState } from "react"
 
 export default function PurchaseOrders() {
+  const { toast } = useToast()
+  const navigate = useNavigate()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -35,6 +43,56 @@ export default function PurchaseOrders() {
     }
   }
 
+  const handleExport = async () => {
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast({
+        title: "Export Complete",
+        description: "Purchase orders exported successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export purchase orders.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCreateOrder = () => {
+    navigate('/create-purchase-order')
+  }
+
+  const handleFilter = () => {
+    toast({
+      title: "Filters",
+      description: "Filter options would open here.",
+    })
+  }
+
+  const handleViewDetails = (poId: string) => {
+    toast({
+      title: "PO Details",
+      description: `Loading details for PO ${poId}...`,
+    })
+  }
+
+  const handleEdit = (poId: string) => {
+    toast({
+      title: "Edit PO",
+      description: `Opening editor for PO ${poId}...`,
+    })
+  }
+
+  const filteredPOs = mockPurchaseOrders.filter(po => 
+    po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getProjectById(po.projectId)?.locationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getSupplierById(po.supplierId)?.supplierName.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -46,11 +104,11 @@ export default function PurchaseOrders() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport} disabled={isLoading}>
             <FileText className="h-4 w-4 mr-2" />
-            Export
+            {isLoading ? "Exporting..." : "Export"}
           </Button>
-          <Button>
+          <Button onClick={handleCreateOrder}>
             <Plus className="h-4 w-4 mr-2" />
             Create Order
           </Button>
@@ -64,9 +122,11 @@ export default function PurchaseOrders() {
           <Input
             placeholder="Search purchase orders..."
             className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleFilter}>
           <Filter className="h-4 w-4 mr-2" />
           Filter
         </Button>
@@ -74,7 +134,7 @@ export default function PurchaseOrders() {
 
       {/* Purchase Orders List */}
       <div className="space-y-4">
-        {mockPurchaseOrders.map((po) => {
+        {filteredPOs.map((po) => {
           const project = getProjectById(po.projectId)
           const supplier = getSupplierById(po.supplierId)
           
@@ -124,10 +184,10 @@ export default function PurchaseOrders() {
                   
                   {/* Actions */}
                   <div className="flex gap-2 justify-end">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(po.id)}>
                       View Details
                     </Button>
-                    <Button size="sm">
+                    <Button size="sm" onClick={() => handleEdit(po.id)}>
                       Edit
                     </Button>
                   </div>

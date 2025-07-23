@@ -26,8 +26,15 @@ import {
   getProjectById,
   getUserById 
 } from "@/data/mockData"
+import { useToast } from "@/hooks/use-toast"
+import { useNavigate } from "react-router-dom"
+import { useState } from "react"
 
 export default function Dashboard() {
+  const { toast } = useToast()
+  const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
+  
   const stats = mockDashboardStats
   const budgetAnalysis = mockBudgetAnalysis
   const alerts = mockInventoryAlerts
@@ -58,6 +65,54 @@ export default function Dashboard() {
     }
   }
 
+  const handleExportReport = async () => {
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast({
+        title: "Report Generated",
+        description: "Dashboard report exported successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate dashboard report.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleNewProject = () => {
+    toast({
+      title: "New Project",
+      description: "Redirecting to project creation...",
+    })
+  }
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'project':
+        handleNewProject()
+        break
+      case 'po':
+        navigate('/create-purchase-order')
+        break
+      case 'delivery':
+        navigate('/receiving')
+        break
+      case 'inventory':
+        navigate('/inventory')
+        break
+      default:
+        toast({
+          title: "Quick Action",
+          description: `${action} action would be performed.`,
+        })
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -69,11 +124,11 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportReport} disabled={isLoading}>
             <FileText className="h-4 w-4 mr-2" />
-            Export Report
+            {isLoading ? "Exporting..." : "Export Report"}
           </Button>
-          <Button>
+          <Button onClick={handleNewProject}>
             <Building2 className="h-4 w-4 mr-2" />
             New Project
           </Button>
@@ -275,19 +330,19 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleQuickAction('project')}>
               <Building2 className="h-6 w-6" />
               <span className="text-sm">New Project</span>
             </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleQuickAction('po')}>
               <ShoppingCart className="h-6 w-6" />
               <span className="text-sm">Create PO</span>
             </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleQuickAction('delivery')}>
               <Truck className="h-6 w-6" />
               <span className="text-sm">Log Delivery</span>
             </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleQuickAction('inventory')}>
               <Package className="h-6 w-6" />
               <span className="text-sm">Check Inventory</span>
             </Button>

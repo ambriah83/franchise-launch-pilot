@@ -12,6 +12,8 @@ import {
   TrendingDown,
   Minus
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { useState } from "react"
 
 const mockInventoryItems = [
   {
@@ -61,6 +63,10 @@ const mockInventoryItems = [
 ]
 
 export default function Inventory() {
+  const { toast } = useToast()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -82,6 +88,60 @@ export default function Inventory() {
     return ((onHand - committed) / onHand) * 100
   }
 
+  const handleExport = async () => {
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast({
+        title: "Export Complete",
+        description: "Inventory data exported successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export inventory data.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleAddItem = () => {
+    toast({
+      title: "Add Inventory Item",
+      description: "Item creation form would open here.",
+    })
+  }
+
+  const handleFilter = () => {
+    toast({
+      title: "Filter Options",
+      description: "Filter panel would open here.",
+    })
+  }
+
+  const handleViewDetails = (itemId: number) => {
+    toast({
+      title: "Item Details",
+      description: `Loading details for item ${itemId}...`,
+    })
+  }
+
+  const handleReorder = (itemId: number) => {
+    toast({
+      title: "Reorder Item",
+      description: `Creating reorder request for item ${itemId}...`,
+    })
+  }
+
+  const filteredItems = mockInventoryItems.filter(item =>
+    item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.warehouse.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -93,10 +153,10 @@ export default function Inventory() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
-            Export
+          <Button variant="outline" onClick={handleExport} disabled={isLoading}>
+            {isLoading ? "Exporting..." : "Export"}
           </Button>
-          <Button>
+          <Button onClick={handleAddItem}>
             Add Item
           </Button>
         </div>
@@ -109,9 +169,11 @@ export default function Inventory() {
           <Input
             placeholder="Search inventory..."
             className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleFilter}>
           <Filter className="h-4 w-4 mr-2" />
           Filter
         </Button>
@@ -119,7 +181,7 @@ export default function Inventory() {
 
       {/* Inventory List */}
       <div className="space-y-4">
-        {mockInventoryItems.map((item) => {
+        {filteredItems.map((item) => {
           const available = item.quantityOnHand - item.quantityCommitted
           const stockInfo = getStockStatus(item.quantityOnHand, item.quantityCommitted, item.reorderLevel)
           const progressValue = getStockProgress(item.quantityOnHand, item.quantityCommitted)
@@ -176,10 +238,10 @@ export default function Inventory() {
                   
                   {/* Actions */}
                   <div className="flex flex-col gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(item.id)}>
                       View Details
                     </Button>
-                    <Button size="sm">
+                    <Button size="sm" onClick={() => handleReorder(item.id)}>
                       Reorder
                     </Button>
                   </div>

@@ -10,8 +10,91 @@ import {
   Save,
   Send
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { useState } from "react"
 
 export default function CreatePurchaseOrder() {
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const [selectedProject, setSelectedProject] = useState("")
+  const [selectedSupplier, setSelectedSupplier] = useState("")
+  const [notes, setNotes] = useState("")
+
+  const handleSaveDraft = async () => {
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast({
+        title: "Draft Saved",
+        description: "Purchase order draft has been saved successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save purchase order draft.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSubmitOrder = async () => {
+    if (!selectedProject || !selectedSupplier) {
+      toast({
+        title: "Missing Information",
+        description: "Please select both project and supplier before submitting.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      toast({
+        title: "Order Submitted",
+        description: "Purchase order has been submitted successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Submission Failed",
+        description: "Failed to submit purchase order.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleAddItem = () => {
+    toast({
+      title: "Add Item",
+      description: "Item selection dialog would open here.",
+    })
+  }
+
+  const handleLoadTemplate = () => {
+    toast({
+      title: "Load Template",
+      description: "Template selection would open here.",
+    })
+  }
+
+  const handleCopyPrevious = () => {
+    toast({
+      title: "Copy Previous Order",
+      description: "Previous order selection would open here.",
+    })
+  }
+
+  const handleImportCatalog = () => {
+    toast({
+      title: "Import from Catalog",
+      description: "Catalog import dialog would open here.",
+    })
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -23,13 +106,13 @@ export default function CreatePurchaseOrder() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleSaveDraft} disabled={isLoading}>
             <Save className="h-4 w-4 mr-2" />
-            Save Draft
+            {isLoading ? "Saving..." : "Save Draft"}
           </Button>
-          <Button>
+          <Button onClick={handleSubmitOrder} disabled={isLoading}>
             <Send className="h-4 w-4 mr-2" />
-            Submit Order
+            {isLoading ? "Submitting..." : "Submit Order"}
           </Button>
         </div>
       </div>
@@ -46,7 +129,7 @@ export default function CreatePurchaseOrder() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="project">Project Location</Label>
-                  <Select>
+                  <Select value={selectedProject} onValueChange={setSelectedProject}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select project..." />
                     </SelectTrigger>
@@ -60,7 +143,7 @@ export default function CreatePurchaseOrder() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="supplier">Supplier</Label>
-                  <Select>
+                  <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select supplier..." />
                     </SelectTrigger>
@@ -79,6 +162,8 @@ export default function CreatePurchaseOrder() {
                   id="notes"
                   placeholder="Add any special instructions or notes for this order..."
                   rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
             </CardContent>
@@ -92,7 +177,7 @@ export default function CreatePurchaseOrder() {
                   <CardTitle>Order Items</CardTitle>
                   <CardDescription>Add items to this purchase order</CardDescription>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleAddItem}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Item
                 </Button>
@@ -141,13 +226,13 @@ export default function CreatePurchaseOrder() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={handleLoadTemplate}>
                 Load from Template
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={handleCopyPrevious}>
                 Copy from Previous Order
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={handleImportCatalog}>
                 Import from Catalog
               </Button>
             </CardContent>

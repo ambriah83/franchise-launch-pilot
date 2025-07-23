@@ -9,8 +9,13 @@ import {
   Clock,
   FileText
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { useState } from "react"
 
 export default function Analytics() {
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -18,6 +23,32 @@ export default function Analytics() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)
+  }
+
+  const handleGenerateReport = async () => {
+    setIsLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      toast({
+        title: "Report Generated",
+        description: "Analytics report has been generated and downloaded.",
+      })
+    } catch (error) {
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate analytics report.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCustomDashboard = () => {
+    toast({
+      title: "Custom Dashboard",
+      description: "Dashboard customization panel would open here.",
+    })
   }
 
   return (
@@ -31,11 +62,11 @@ export default function Analytics() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleGenerateReport} disabled={isLoading}>
             <FileText className="h-4 w-4 mr-2" />
-            Generate Report
+            {isLoading ? "Generating..." : "Generate Report"}
           </Button>
-          <Button>
+          <Button onClick={handleCustomDashboard}>
             <BarChart3 className="h-4 w-4 mr-2" />
             Custom Dashboard
           </Button>

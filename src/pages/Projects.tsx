@@ -12,8 +12,15 @@ import {
   MoreHorizontal
 } from "lucide-react"
 import { mockProjects, getUserById } from "@/data/mockData"
+import { useToast } from "@/hooks/use-toast"
+import { useNavigate } from "react-router-dom"
+import { useState } from "react"
 
 export default function Projects() {
+  const { toast } = useToast()
+  const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -39,6 +46,61 @@ export default function Projects() {
     return (spent / budget) * 100
   }
 
+  const handleExportReport = async () => {
+    setIsLoading(true)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      toast({
+        title: "Report Generated",
+        description: "Projects report has been exported successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Export Failed", 
+        description: "Failed to generate projects report.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleNewProject = () => {
+    toast({
+      title: "New Project",
+      description: "Redirecting to project creation...",
+    })
+    // Navigate to project creation page (would be implemented)
+    setTimeout(() => {
+      toast({
+        title: "Feature Coming Soon",
+        description: "Project creation workflow will be available soon.",
+      })
+    }, 1000)
+  }
+
+  const handleViewDetails = (projectId: string) => {
+    toast({
+      title: "Project Details",
+      description: `Loading details for project ${projectId}...`,
+    })
+  }
+
+  const handleManageProject = (projectId: string) => {
+    toast({
+      title: "Project Management",
+      description: `Opening management dashboard for project ${projectId}...`,
+    })
+  }
+
+  const handleMoreOptions = (projectId: string) => {
+    toast({
+      title: "Project Options",
+      description: "More options menu would open here.",
+    })
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -50,11 +112,11 @@ export default function Projects() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportReport} disabled={isLoading}>
             <FileText className="h-4 w-4 mr-2" />
-            Export Report
+            {isLoading ? "Exporting..." : "Export Report"}
           </Button>
-          <Button>
+          <Button onClick={handleNewProject}>
             <Plus className="h-4 w-4 mr-2" />
             New Project
           </Button>
@@ -78,7 +140,7 @@ export default function Projects() {
                       Franchise Location
                     </CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => handleMoreOptions(project.id)}>
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
@@ -117,10 +179,10 @@ export default function Projects() {
                 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewDetails(project.id)}>
                     View Details
                   </Button>
-                  <Button size="sm" className="flex-1">
+                  <Button size="sm" className="flex-1" onClick={() => handleManageProject(project.id)}>
                     Manage
                   </Button>
                 </div>
