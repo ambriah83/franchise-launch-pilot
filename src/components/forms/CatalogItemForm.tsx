@@ -1,263 +1,334 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { CatalogItem } from '../../types';
-import { localStorageService } from '../../services/localStorageService';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/dialog"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form"
+import { CatalogItem } from "../../types"
+import { localStorageService } from "../../services/localStorageService"
+import { useToast } from "@/hooks/use-toast"
+import { catalogItemSchema } from "@/schemas/validationSchemas"
+import { useEffect, useState } from "react"
 
 interface CatalogItemFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  item?: CatalogItem;
-  onSuccess: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  item?: CatalogItem
+  onSuccess: () => void
 }
 
 function CatalogItemForm({ open, onOpenChange, item, onSuccess }: CatalogItemFormProps) {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    sku: item?.sku || '',
-    itemName: item?.itemName || '',
-    description: item?.description || '',
-    category: item?.category || '',
-    supplierId: item?.supplierId || '',
-    defaultUnitPrice: item?.defaultUnitPrice || 0,
-    status: item?.status || 'Active' as 'Active' | 'Discontinued'
-  });
+  const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const suppliers = localStorageService.getSuppliers();
+  const form = useForm({
+    resolver: zodResolver(catalogItemSchema),
+    defaultValues: {
+      sku: item?.sku || "",
+      itemName: item?.itemName || "",
+      description: item?.description || "",
+      category: item?.category || "",
+      supplierId: item?.supplierId || "",
+      defaultUnitPrice: item?.defaultUnitPrice || 0,
+      status: item?.status || "Active" as "Active" | "Discontinued"
+    }
+  })
+
+  // Reset form when item changes
+  useEffect(() => {
+    if (item) {
+      form.reset({
+        sku: item.sku,
+        itemName: item.itemName,
+        description: item.description,
+        category: item.category,
+        supplierId: item.supplierId,
+        defaultUnitPrice: item.defaultUnitPrice,
+        status: item.status
+      })
+    } else {
+      form.reset({
+        sku: "",
+        itemName: "",
+        description: "",
+        category: "",
+        supplierId: "",
+        defaultUnitPrice: 0,
+        status: "Active"
+      })
+    }
+  }, [item, form])
+
+  const suppliers = localStorageService.getSuppliers()
   const categories = [
-    'Kitchen Equipment',
-    'Furniture', 
-    'Technology',
-    'Fixtures',
-    'Supplies',
-    'Safety Equipment',
-    'Other'
-  ];
+    "Kitchen Equipment",
+    "Furniture", 
+    "Technology",
+    "Fixtures",
+    "Supplies",
+    "Safety Equipment",
+    "Other"
+  ]
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const onSubmit = async (data: any) => {
+    setIsSubmitting(true)
 
     try {
-      // Validation
-      if (!formData.sku.trim() || !formData.itemName.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "SKU and Item Name are required",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (formData.defaultUnitPrice <= 0) {
-        toast({
-          title: "Validation Error",
-          description: "Price must be greater than 0",
-          variant: "destructive"
-        });
-        return;
-      }
-
       const itemData = {
-        sku: formData.sku.trim().toUpperCase(),
-        itemName: formData.itemName.trim(),
-        description: formData.description.trim(),
-        category: formData.category,
-        supplierId: formData.supplierId,
-        defaultUnitPrice: formData.defaultUnitPrice,
-        status: formData.status
-      };
+        sku: data.sku.trim().toUpperCase(),
+        itemName: data.itemName.trim(),
+        description: data.description.trim(),
+        category: data.category,
+        supplierId: data.supplierId,
+        defaultUnitPrice: data.defaultUnitPrice,
+        status: data.status
+      }
 
       if (item) {
-        // Update existing item
-        localStorageService.updateCatalogItem(item.id, itemData);
+        localStorageService.updateCatalogItem(item.id, itemData)
         toast({
           title: "Item Updated",
-          description: `${formData.itemName} has been updated successfully.`
-        });
+          description: `${data.itemName} has been updated successfully.`
+        })
       } else {
-        // Create new item
-        localStorageService.createCatalogItem(itemData);
+        localStorageService.createCatalogItem(itemData)
         toast({
           title: "Item Created",
-          description: `${formData.itemName} has been added to the catalog.`
-        });
+          description: `${data.itemName} has been added to the catalog.`
+        })
       }
 
-      onSuccess();
-      onOpenChange(false);
-
-      // Reset form
-      setFormData({
-        sku: '',
-        itemName: '',
-        description: '',
-        category: '',
-        supplierId: '',
-        defaultUnitPrice: 0,
-        status: 'Active'
-      });
-
+      onSuccess()
+      onOpenChange(false)
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save item. Please try again.",
         variant: "destructive"
-      });
+      })
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false)
     }
-  };
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onOpenChange(false)
+    }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      form.handleSubmit(onSubmit)()
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px]" onKeyDown={handleKeyDown}>
         <DialogHeader>
           <DialogTitle>
-            {item ? 'Edit Catalog Item' : 'Add New Catalog Item'}
+            {item ? "Edit Catalog Item" : "Add New Catalog Item"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="sku">SKU *</Label>
-              <Input
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                placeholder="e.g., CHAIR-001"
-                required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="sku"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SKU *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., CHAIR-001"
+                        {...field}
+                        className={form.formState.errors.sku ? "border-destructive" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Discontinued">Discontinued</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="itemName"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Item Name *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Dining Chair - Standard"
+                        {...field}
+                        className={form.formState.errors.itemName ? "border-destructive" : ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={form.formState.errors.category ? "border-destructive" : ""}>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map(category => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="supplierId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Supplier *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={form.formState.errors.supplierId ? "border-destructive" : ""}>
+                          <SelectValue placeholder="Select supplier" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {suppliers.map(supplier => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.supplierName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="defaultUnitPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Default Unit Price ($) *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="85.00"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        className={form.formState.errors.defaultUnitPrice ? "border-destructive" : ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Standard price for this item
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value: 'Active' | 'Discontinued') => setFormData(prev => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Discontinued">Discontinued</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="itemName">Item Name *</Label>
-              <Input
-                id="itemName"
-                value={formData.itemName}
-                onChange={(e) => setFormData(prev => ({ ...prev, itemName: e.target.value }))}
-                placeholder="e.g., Dining Chair - Standard"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select 
-                value={formData.category} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="supplier">Supplier</Label>
-              <Select 
-                value={formData.supplierId} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, supplierId: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(supplier => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.supplierName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="defaultUnitPrice">Default Unit Price ($) *</Label>
-              <Input
-                id="defaultUnitPrice"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.defaultUnitPrice}
-                onChange={(e) => setFormData(prev => ({ ...prev, defaultUnitPrice: Number(e.target.value) }))}
-                placeholder="85.00"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Detailed description of the item..."
-              rows={3}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Detailed description of the item..."
+                      rows={3}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Optional detailed description of the catalog item
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : (item ? 'Update Item' : 'Add Item')}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : (item ? "Update Item" : "Add Item")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 // Named and default exports for compatibility
-export { CatalogItemForm };
-export default CatalogItemForm;
+export { CatalogItemForm }
+export default CatalogItemForm
