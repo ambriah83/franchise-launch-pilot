@@ -1,7 +1,9 @@
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
 import { 
   Building2, 
   Calendar,
@@ -9,17 +11,35 @@ import {
   User,
   Plus,
   FileText,
-  MoreHorizontal
+  MoreHorizontal,
+  Search,
+  Filter
 } from "lucide-react"
-import { mockProjects, getUserById } from "@/data/mockData"
+import { getUserById } from "@/data/mockData"
 import { useToast } from "@/hooks/use-toast"
 import { useNavigate } from "react-router-dom"
-import { useState } from "react"
+import { ProjectForm } from "../components/forms/ProjectForm"
+import { localStorageService } from "../services/localStorageService"
+import { Project } from "../types"
 
 export default function Projects() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [showProjectForm, setShowProjectForm] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<Project | undefined>()
+
+  // Load projects from localStorage
+  useEffect(() => {
+    loadProjects()
+  }, [])
+
+  const loadProjects = () => {
+    const storedProjects = localStorageService.getProjects()
+    setProjects(storedProjects)
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -67,39 +87,35 @@ export default function Projects() {
   }
 
   const handleNewProject = () => {
-    toast({
-      title: "New Project",
-      description: "Redirecting to project creation...",
-    })
-    // Navigate to project creation page (would be implemented)
-    setTimeout(() => {
-      toast({
-        title: "Feature Coming Soon",
-        description: "Project creation workflow will be available soon.",
-      })
-    }, 1000)
+    setSelectedProject(undefined)
+    setShowProjectForm(true)
   }
 
-  const handleViewDetails = (projectId: string) => {
-    toast({
-      title: "Project Details",
-      description: `Loading details for project ${projectId}...`,
-    })
+  const handleViewDetails = (project: Project) => {
+    setSelectedProject(project)
+    setShowProjectForm(true)
   }
 
   const handleManageProject = (projectId: string) => {
-    toast({
-      title: "Project Management",
-      description: `Opening management dashboard for project ${projectId}...`,
-    })
+    // Navigate to a project management page (to be implemented)
+    navigate(`/projects/${projectId}/manage`)
   }
 
   const handleMoreOptions = (projectId: string) => {
-    toast({
-      title: "Project Options",
-      description: "More options menu would open here.",
-    })
+    const project = projects.find(p => p.id === projectId)
+    if (project) {
+      toast({
+        title: "Project Options",
+        description: `Additional options for ${project.locationName} will be available here.`,
+      })
+    }
   }
+
+  // Filter projects based on search term
+  const filteredProjects = projects.filter(project =>
+    project.locationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    project.status.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div className="p-6 space-y-6">
@@ -123,9 +139,26 @@ export default function Projects() {
         </div>
       </div>
 
+      {/* Search and Filter */}
+      <div className="flex gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button variant="outline">
+          <Filter className="h-4 w-4 mr-2" />
+          Filter
+        </Button>
+      </div>
+
       {/* Project Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {mockProjects.map((project) => {
+        {filteredProjects.map((project) => {
           const manager = getUserById(project.projectManagerId)
           const progressValue = getProgressValue(project)
           
@@ -179,7 +212,7 @@ export default function Projects() {
                 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewDetails(project.id)}>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewDetails(project)}>
                     View Details
                   </Button>
                   <Button size="sm" className="flex-1" onClick={() => handleManageProject(project.id)}>
@@ -191,6 +224,14 @@ export default function Projects() {
           )
         })}
       </div>
+
+      {/* Project Form Dialog */}
+      <ProjectForm
+        open={showProjectForm}
+        onOpenChange={setShowProjectForm}
+        project={selectedProject}
+        onSuccess={loadProjects}
+      />
     </div>
   )
 }
