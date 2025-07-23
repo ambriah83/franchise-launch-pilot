@@ -8,10 +8,16 @@ import {
   Plus,
   ShoppingCart,
   Save,
-  Send
+  Send,
+  FileText,
+  Copy
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { PurchaseOrderLineItems, PurchaseOrderLineItem } from "@/components/purchase-orders/PurchaseOrderLineItems"
+import { OrderTemplateDialog } from "@/components/purchase-orders/OrderTemplateDialog"
+import { Project, Supplier } from "@/types"
+import { localStorageService } from "@/services/localStorageService"
 
 export default function CreatePurchaseOrder() {
   const { toast } = useToast()
@@ -19,14 +25,63 @@ export default function CreatePurchaseOrder() {
   const [selectedProject, setSelectedProject] = useState("")
   const [selectedSupplier, setSelectedSupplier] = useState("")
   const [notes, setNotes] = useState("")
+  const [lineItems, setLineItems] = useState<PurchaseOrderLineItem[]>([])
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+
+  useEffect(() => {
+    setProjects(localStorageService.getProjects())
+    setSuppliers(localStorageService.getSuppliers())
+  }, [])
+
+  const calculateTotals = () => {
+    const subtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0)
+    const taxRate = 0.0875 // 8.75% tax rate
+    const tax = subtotal * taxRate
+    const total = subtotal + tax
+    
+    return { subtotal, tax, total }
+  }
+
+  const { subtotal, tax, total } = calculateTotals()
 
   const handleSaveDraft = async () => {
+    if (!selectedProject || lineItems.length === 0) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a project and add at least one item before saving.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Generate PO number
+      const poNumber = `PO-${Date.now()}`
+      
+      // Create purchase order data
+      const purchaseOrderData = {
+        poNumber,
+        poId: Date.now(),
+        version: 1,
+        projectId: selectedProject,
+        supplierId: selectedSupplier || suppliers[0]?.id || "",
+        status: 'Draft' as const,
+        dateCreated: new Date(),
+        totalCost: total,
+        requestedDate: new Date()
+      }
+
+      // Save purchase order
+      const savedPO = localStorageService.createPurchaseOrder(purchaseOrderData)
+      
+      // TODO: Save line items when we add line item support to localStorageService
+      
       toast({
         title: "Draft Saved",
-        description: "Purchase order draft has been saved successfully.",
+        description: `Purchase order ${poNumber} has been saved as draft.`,
       })
     } catch (error) {
       toast({
@@ -40,10 +95,10 @@ export default function CreatePurchaseOrder() {
   }
 
   const handleSubmitOrder = async () => {
-    if (!selectedProject || !selectedSupplier) {
+    if (!selectedProject || !selectedSupplier || lineItems.length === 0) {
       toast({
         title: "Missing Information",
-        description: "Please select both project and supplier before submitting.",
+        description: "Please select project, supplier, and add items before submitting.",
         variant: "destructive",
       })
       return
@@ -51,11 +106,37 @@ export default function CreatePurchaseOrder() {
 
     setIsLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Generate PO number
+      const poNumber = `PO-${Date.now()}`
+      
+      // Create purchase order data
+      const purchaseOrderData = {
+        poNumber,
+        poId: Date.now(),
+        version: 1,
+        projectId: selectedProject,
+        supplierId: selectedSupplier,
+        status: 'Pending' as const,
+        dateCreated: new Date(),
+        totalCost: total,
+        requestedDate: new Date()
+      }
+
+      // Save purchase order
+      const savedPO = localStorageService.createPurchaseOrder(purchaseOrderData)
+      
+      // TODO: Save line items when we add line item support to localStorageService
+      
       toast({
         title: "Order Submitted",
-        description: "Purchase order has been submitted successfully.",
+        description: `Purchase order ${poNumber} has been submitted successfully.`,
       })
+
+      // Reset form
+      setSelectedProject("")
+      setSelectedSupplier("")
+      setNotes("")
+      setLineItems([])
     } catch (error) {
       toast({
         title: "Submission Failed",
@@ -67,17 +148,12 @@ export default function CreatePurchaseOrder() {
     }
   }
 
-  const handleAddItem = () => {
+  const handleLoadTemplate = (templateItems: PurchaseOrderLineItem[]) => {
+    // Replace existing items with template items
+    setLineItems(templateItems)
     toast({
-      title: "Add Item",
-      description: "Item selection dialog would open here.",
-    })
-  }
-
-  const handleLoadTemplate = () => {
-    toast({
-      title: "Load Template",
-      description: "Template selection would open here.",
+      title: "Template Loaded",
+      description: `Added ${templateItems.length} items from template.`,
     })
   }
 
@@ -85,13 +161,6 @@ export default function CreatePurchaseOrder() {
     toast({
       title: "Copy Previous Order",
       description: "Previous order selection would open here.",
-    })
-  }
-
-  const handleImportCatalog = () => {
-    toast({
-      title: "Import from Catalog",
-      description: "Catalog import dialog would open here.",
     })
   }
 
@@ -134,9 +203,11 @@ export default function CreatePurchaseOrder() {
                       <SelectValue placeholder="Select project..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="downtown-chicago">Downtown Chicago</SelectItem>
-                      <SelectItem value="westside-atlanta">Westside Atlanta</SelectItem>
-                      <SelectItem value="brooklyn-heights">Brooklyn Heights</SelectItem>
+                      {projects.map(project => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.locationName}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -148,9 +219,11 @@ export default function CreatePurchaseOrder() {
                       <SelectValue placeholder="Select supplier..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="restaurant-depot">Restaurant Depot Inc.</SelectItem>
-                      <SelectItem value="kitchen-solutions">Kitchen Solutions LLC</SelectItem>
-                      <SelectItem value="commercial-furniture">Commercial Furniture Co.</SelectItem>
+                      {suppliers.map(supplier => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.supplierName}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -170,27 +243,11 @@ export default function CreatePurchaseOrder() {
           </Card>
 
           {/* Line Items */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Order Items</CardTitle>
-                  <CardDescription>Add items to this purchase order</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={handleAddItem}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg p-4 text-center text-muted-foreground">
-                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No items added yet</p>
-                <p className="text-sm">Click "Add Item" to start building your order</p>
-              </div>
-            </CardContent>
-          </Card>
+          <PurchaseOrderLineItems
+            lineItems={lineItems}
+            onLineItemsChange={setLineItems}
+            supplierId={selectedSupplier}
+          />
         </div>
 
         {/* Order Summary */}
@@ -202,20 +259,20 @@ export default function CreatePurchaseOrder() {
             <CardContent className="space-y-4">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span>$0.00</span>
+                <span>${subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Tax:</span>
-                <span>$0.00</span>
+                <span>Tax (8.75%):</span>
+                <span>${tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping:</span>
-                <span>$0.00</span>
+                <span>TBD</span>
               </div>
               <div className="border-t pt-4">
-                <div className="flex justify-between font-semibold">
+                <div className="flex justify-between font-semibold text-lg">
                   <span>Total:</span>
-                  <span>$0.00</span>
+                  <span>${total.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>
@@ -226,19 +283,28 @@ export default function CreatePurchaseOrder() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" onClick={handleLoadTemplate}>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start" 
+                onClick={() => setShowTemplateDialog(true)}
+              >
+                <FileText className="h-4 w-4 mr-2" />
                 Load from Template
               </Button>
               <Button variant="outline" className="w-full justify-start" onClick={handleCopyPrevious}>
+                <Copy className="h-4 w-4 mr-2" />
                 Copy from Previous Order
-              </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={handleImportCatalog}>
-                Import from Catalog
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <OrderTemplateDialog
+        open={showTemplateDialog}
+        onOpenChange={setShowTemplateDialog}
+        onTemplateSelected={handleLoadTemplate}
+      />
     </div>
   )
 }
