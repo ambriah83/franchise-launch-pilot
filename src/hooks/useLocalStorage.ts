@@ -5,7 +5,7 @@ import * as mockData from '../data/mockData';
 // Initialize localStorage with mock data on first load
 export const useInitializeStorage = () => {
   useEffect(() => {
-    localStorageService.initializeWithMockData(mockData);
+    localStorageService.initializeWithMockData();
   }, []);
 };
 
